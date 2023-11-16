@@ -11,7 +11,7 @@ class LambdaTimeoutApproaching(Exception):
     "Raised when execution time exceed threshold indicating Lambda function is about to time out."
     pass
 
-class Oscar:
+class Hasher:
   def __init__(self, bucket, key):
     self.bucket=bucket
     self.key=key
@@ -23,7 +23,7 @@ class Oscar:
     self.BLOCKSIZE = 65536
     self.BLOCKSIZE = 65000000
     self.startTime = time.time()
-    self.maxRunTime=10
+    self.maxRunTime=60
     self.export=None
     self.startPart=1
     self.test=False
@@ -31,13 +31,9 @@ class Oscar:
     self.ETagRunningHash=None
     self.ETagPartHash=rehash.md5()
 
-    if self.test:
-      self.hashes=[hashlib.sha512(), hashlib.sha256(), hashlib.sha1(), hashlib.md5()]
-      self.ETagRunningHash=hashlib.md5()
-    else:
-      self.hashes=[rehash.sha512(), rehash.sha256(), rehash.sha1(), rehash.md5()]
-      self.hashes=[rehash.md5()]
-      self.ETagRunningHash=rehash.md5()
+    self.hashes=[rehash.sha512(), rehash.sha256(), rehash.sha1(), rehash.md5()]
+    self.hashes=[rehash.md5()]
+    self.ETagRunningHash=rehash.md5()
     self.partsCutoff=0
     self.setup()
 
@@ -68,22 +64,15 @@ class Oscar:
     self.key=resumeData['key']
     self.startPart=resumeData['part']
     self.ETagRunningHash=pickle.loads(base64.b64decode(resumeData['ETagRH']))
-    if not self.test:
-      for hash in resumeData['hashes']:
-        self.hashes.append(pickle.loads(base64.b64decode(hash)))
+    for hash in resumeData['hashes']:
+      self.hashes.append(pickle.loads(base64.b64decode(hash)))
     pass
 
   def dump(self, part):
     tmp={'bucket':self.bucket, 'key': self.key, 'part':part, 'hashes':[]}
     for hash in self.hashes:
-      if self.test:
-        tmp['hashes'].append("a")
-      else:
-        tmp['hashes'].append(base64.b64encode(pickle.dumps(hash)).decode("utf-8"))
-    if self.test:
-      tmp['ETagRH']='a'
-    else:
-      tmp['ETagRH']=base64.b64encode(pickle.dumps(self.ETagRunningHash)).decode("utf-8")   
+      tmp['hashes'].append(base64.b64encode(pickle.dumps(hash)).decode("utf-8"))
+    tmp['ETagRH']=base64.b64encode(pickle.dumps(self.ETagRunningHash)).decode("utf-8")   
     self.export=json.dumps({'bucket':self.bucket, 'key':self.key,  'state':base64.b64encode(bytes(json.dumps(tmp),'utf-8')).decode("utf-8")})
 
   def checkBucketandKey(self):
@@ -106,14 +95,14 @@ class Oscar:
 
   def getObjectParts(self):
     for part in range(self.startPart, self.parts+1):
-      print("Part: "+str(part))
-      print( self.getElapsedTime())
+#      print("Part: "+str(part))
+#      print( self.getElapsedTime())
 ###TODO: Check the part size vs estimated speed and time left
       if (self.getElapsedTime() > self.maxRunTime):
         pass
         self.dump(part)
         raise LambdaTimeoutApproaching
-        print("NOPE-IN OUT!!")
+#        print("NOPE-IN OUT!!")
         break
       else:
         self.object=self.s3.get_object( Bucket=self.bucket, Key=self.key, PartNumber=(part))
