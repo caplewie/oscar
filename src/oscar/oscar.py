@@ -11,7 +11,7 @@ class LambdaTimeoutApproaching(Exception):
     "Raised when execution time exceed threshold indicating Lambda function is about to time out."
     pass
 
-class Hasher:
+class Oscar:
   def __init__(self, bucket, key):
     self.bucket=bucket
     self.key=key
